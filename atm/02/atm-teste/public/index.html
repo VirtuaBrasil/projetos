@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Caixa Eletrônico</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.12/dist/vue.min.js"></script>
+
+    <style>
+        .nota-container {
+            position: relative;
+            margin-bottom: 15px;
+        }
+
+        .nota-container img {
+            width: 100%;
+            height: auto;
+        }
+
+        .quantidade-nota {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: blue;
+            color: white;
+            border-radius: 50%;
+            padding: 5px 10px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+<div id="app" class="container">
+    <h1 class="text-center mt-5">Caixa Eletrônico</h1>
+    <div class="row mt-4">
+        <div class="col-md-6 offset-md-3">
+            <input type="text" class="form-control" placeholder="Email da conta" v-model="email">
+            <input type="number" class="form-control" placeholder="Valor do Saque" v-model="valorSaque">
+
+            <button class="btn btn-primary mt-2" @click="realizarSaque">Sacar</button>
+        </div>
+    </div>
+    <div class="row mt-3">
+        <div class="col-md-6 offset-md-3">
+            <div class="alert alert-info" v-if="resultado" v-html="resultado"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    new Vue({
+        el: '#app',
+        data: {
+            valorSaque: null,
+            resultado: null,
+            email: 'santosefilhomarcos@gmail.com',
+            imagensNotas: {
+                '100': '/images/nota-100.jpg',
+                '50': '/images/nota-50.jpg',
+                '20': '/images/nota-20.jpg',
+                '10': '/images/nota-10.jpg'
+            }
+        },
+        methods: {
+            async realizarSaque() {
+                const response = await fetch('/api/transactions/withdraw', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        amount: parseFloat(this.valorSaque),
+                        email: this.email
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    this.resultado = this.formatarResultadoComImagens(data);
+                } else {
+                    this.resultado = 'Erro: ' + data['error'];
+                }
+            },
+            formatarResultadoComImagens(data) {
+                let resultadoHtml = '';
+
+                for (let valorNota in data['notes']) {
+                    resultadoHtml += `
+                        <div class="nota-container">
+                            <img src="${this.imagensNotas[valorNota]}" alt="Nota de R$${valorNota}" class="img-fluid" />
+                            <span class="quantidade-nota">${data['notes'][valorNota]}</span>
+                        </div>
+                    `;
+                }
+
+                resultadoHtml += `
+                    <div class="alert alert-success">
+                        <strong>Saldo restante: R$${data['newBalance']}</strong>
+                    </div>
+                `;
+                return resultadoHtml;
+            }
+
+        }
+    });
+</script>
+</body>
+</html>
